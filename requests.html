@@ -1,0 +1,1312 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Requests - SkillSwap</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================
+         NAVBAR
+    ====================================== -->
+
+    <nav class="dashboard-navbar">
+
+        <div class="dashboard-logo">
+            Skill<span>Swap</span>
+        </div>
+
+
+        <div class="dashboard-nav-links">
+
+            <a href="dashboard.html">
+                Dashboard
+            </a>
+
+
+            <a href="profile.html">
+                My Profile
+            </a>
+
+
+            <a
+                href="requests.html"
+                class="active"
+            >
+                Requests
+            </a>
+
+
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- =====================================
+         MAIN
+    ====================================== -->
+
+    <main class="requests-container">
+
+
+        <div class="requests-heading">
+
+            <p class="section-label">
+                SKILL EXCHANGE
+            </p>
+
+
+            <h1>
+                Swap Requests
+            </h1>
+
+
+            <p>
+                Manage the people you want to exchange
+                skills with.
+            </p>
+
+        </div>
+
+
+
+        <!-- =====================================
+             RECEIVED REQUESTS
+        ====================================== -->
+
+        <section class="requests-section">
+
+            <div class="requests-section-heading">
+
+                <h2>
+                    📥 Received Requests
+                </h2>
+
+
+                <span
+                    id="receivedCount"
+                    class="request-count"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div
+                id="receivedRequests"
+                class="requests-grid"
+            >
+
+                <p class="request-loading">
+                    Loading requests...
+                </p>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             SENT REQUESTS
+        ====================================== -->
+
+        <section class="requests-section">
+
+            <div class="requests-section-heading">
+
+                <h2>
+                    📤 Sent Requests
+                </h2>
+
+
+                <span
+                    id="sentCount"
+                    class="request-count"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div
+                id="sentRequests"
+                class="requests-grid"
+            >
+
+                <p class="request-loading">
+                    Loading requests...
+                </p>
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+
+    <!-- =====================================
+         FIREBASE
+    ====================================== -->
+
+    <script type="module">
+
+
+        /* =====================================
+           FIREBASE IMPORTS
+        ====================================== */
+
+        import {
+            auth,
+            db
+        } from "./firebase.js";
+
+
+        import {
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+
+        import {
+            collection,
+            getDocs,
+            doc,
+            getDoc,
+            updateDoc,
+            deleteDoc
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+
+
+        /* =====================================
+           ELEMENTS
+        ====================================== */
+
+        const logoutBtn =
+            document.getElementById(
+                "logoutBtn"
+            );
+
+
+        const receivedRequests =
+            document.getElementById(
+                "receivedRequests"
+            );
+
+
+        const sentRequests =
+            document.getElementById(
+                "sentRequests"
+            );
+
+
+        const receivedCount =
+            document.getElementById(
+                "receivedCount"
+            );
+
+
+        const sentCount =
+            document.getElementById(
+                "sentCount"
+            );
+
+
+
+        /* =====================================
+           CURRENT USER
+        ====================================== */
+
+        let currentUser = null;
+
+
+
+        /* =====================================
+           LOGOUT
+        ====================================== */
+
+        logoutBtn.addEventListener(
+            "click",
+            async function () {
+
+                try {
+
+                    await signOut(auth);
+
+                    window.location.href =
+                        "login.html";
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "Logout error:",
+                        error
+                    );
+
+                    alert(
+                        "Could not logout."
+                    );
+
+                }
+
+            }
+        );
+
+
+
+        /* =====================================
+           CHECK LOGIN
+        ====================================== */
+
+        onAuthStateChanged(
+            auth,
+            async function (user) {
+
+                if (!user) {
+
+                    window.location.href =
+                        "login.html";
+
+                    return;
+
+                }
+
+
+                currentUser = user;
+
+
+                await loadRequests();
+
+            }
+        );
+
+
+
+        /* =====================================
+           LOAD REQUESTS
+        ====================================== */
+
+        async function loadRequests() {
+
+            try {
+
+                const requestsSnapshot =
+                    await getDocs(
+                        collection(
+                            db,
+                            "swapRequests"
+                        )
+                    );
+
+
+                const received = [];
+
+                const sent = [];
+
+
+                requestsSnapshot.forEach(
+                    function (requestDocument) {
+
+                        const request =
+                            requestDocument.data();
+
+
+                        const requestData = {
+
+                            id:
+                                requestDocument.id,
+
+                            ...request
+
+                        };
+
+
+                        /*
+                         Requests received
+                         by current user.
+                        */
+
+                        if (
+                            request.toUserId ===
+                            currentUser.uid
+                        ) {
+
+                            received.push(
+                                requestData
+                            );
+
+                        }
+
+
+                        /*
+                         Requests sent
+                         by current user.
+                        */
+
+                        if (
+                            request.fromUserId ===
+                            currentUser.uid
+                        ) {
+
+                            sent.push(
+                                requestData
+                            );
+
+                        }
+
+                    }
+                );
+
+
+                receivedCount.textContent =
+                    received.length;
+
+
+                sentCount.textContent =
+                    sent.length;
+
+
+                await displayReceived(
+                    received
+                );
+
+
+                await displaySent(
+                    sent
+                );
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Error loading requests:",
+                    error
+                );
+
+
+                receivedRequests.innerHTML = `
+
+                    <div class="empty-requests">
+
+                        <h3>
+                            Could not load requests
+                        </h3>
+
+                        <p>
+                            ${escapeHTML(
+                                error.message
+                            )}
+                        </p>
+
+                    </div>
+
+                `;
+
+
+                sentRequests.innerHTML = `
+
+                    <div class="empty-requests">
+
+                        <h3>
+                            Could not load requests
+                        </h3>
+
+                        <p>
+                            ${escapeHTML(
+                                error.message
+                            )}
+                        </p>
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+
+
+        /* =====================================
+           DISPLAY RECEIVED REQUESTS
+        ====================================== */
+
+        async function displayReceived(
+            requests
+        ) {
+
+            receivedRequests.innerHTML = "";
+
+
+            if (
+                requests.length === 0
+            ) {
+
+                receivedRequests.innerHTML = `
+
+                    <div class="empty-requests">
+
+                        <div>
+                            📭
+                        </div>
+
+                        <h3>
+                            No received requests
+                        </h3>
+
+                        <p>
+                            When someone wants to
+                            exchange skills with you,
+                            their request will appear here.
+                        </p>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+            for (
+                const request of requests
+            ) {
+
+                const sender =
+                    await getUser(
+                        request.fromUserId
+                    );
+
+
+                const senderName =
+                    sender?.name ||
+                    "SkillSwap User";
+
+
+                const status =
+                    request.status ||
+                    "pending";
+
+
+                const statusClass =
+                    status.toLowerCase();
+
+
+
+                /* =====================================
+                   SKILLS OFFERED
+                ====================================== */
+
+                const skillsOffered =
+                    Array.isArray(
+                        request.skillsOffered
+                    )
+                        ? request.skillsOffered
+                        : [];
+
+
+                const skillsWanted =
+                    Array.isArray(
+                        request.skillsWanted
+                    )
+                        ? request.skillsWanted
+                        : [];
+
+
+
+                const offeredHTML =
+                    skillsOffered.length > 0
+
+                    ?
+
+                    skillsOffered
+                        .map(
+                            function (skill) {
+
+                                return `
+                                    <span>
+                                        ${escapeHTML(
+                                            skill
+                                        )}
+                                    </span>
+                                `;
+
+                            }
+                        )
+                        .join("")
+
+                    :
+
+                    "<small>No skills listed</small>";
+
+
+
+                const wantedHTML =
+                    skillsWanted.length > 0
+
+                    ?
+
+                    skillsWanted
+                        .map(
+                            function (skill) {
+
+                                return `
+                                    <span>
+                                        ${escapeHTML(
+                                            skill
+                                        )}
+                                    </span>
+                                `;
+
+                            }
+                        )
+                        .join("")
+
+                    :
+
+                    "<small>No skills listed</small>";
+
+
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                card.className =
+                    "request-card";
+
+
+
+                /* =====================================
+                   RECEIVED REQUEST ACTIONS
+                ====================================== */
+
+                let actionHTML = "";
+
+
+
+                /*
+                 PENDING
+                 */
+
+                if (
+                    status === "pending"
+                ) {
+
+                    actionHTML = `
+
+                        <div class="request-actions">
+
+                            <button
+                                class="accept-btn"
+                                data-id="${request.id}"
+                            >
+                                Accept
+                            </button>
+
+
+                            <button
+                                class="reject-btn"
+                                data-id="${request.id}"
+                            >
+                                Reject
+                            </button>
+
+                        </div>
+
+                    `;
+
+                }
+
+
+
+                /*
+                 ACCEPTED
+                 */
+
+                else if (
+                    status === "accepted"
+                ) {
+
+                    actionHTML = `
+
+                        <div
+                            class="request-status accepted"
+                        >
+                            ✓ Request Accepted
+                        </div>
+
+                    `;
+
+                }
+
+
+
+                /*
+                 REJECTED
+                 */
+
+                else if (
+                    status === "rejected"
+                ) {
+
+                    actionHTML = `
+
+                        <div
+                            class="request-status rejected"
+                        >
+                            ✕ Request Rejected
+                        </div>
+
+
+                        <div class="request-actions">
+
+                            <button
+                                class="delete-btn"
+                                data-id="${request.id}"
+                            >
+                                Delete
+                            </button>
+
+                        </div>
+
+                    `;
+
+                }
+
+
+
+                /*
+                 COMPLETED
+                 */
+
+                else if (
+                    status === "completed"
+                ) {
+
+                    actionHTML = `
+
+                        <div
+                            class="request-status completed"
+                        >
+                            ✓ Swap Completed
+                        </div>
+
+                    `;
+
+                }
+
+
+
+                /* =====================================
+                   CARD HTML
+                ====================================== */
+
+                card.innerHTML = `
+
+                    <div class="request-user">
+
+                        <div class="request-avatar">
+
+                            ${escapeHTML(
+                                senderName
+                                    .charAt(0)
+                                    .toUpperCase()
+                            )}
+
+                        </div>
+
+
+                        <div>
+
+                            <h3>
+                                ${escapeHTML(
+                                    senderName
+                                )}
+                            </h3>
+
+
+                            <p>
+                                wants to exchange
+                                skills with you
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="request-skills">
+
+                        <strong>
+                            Skills Offered
+                        </strong>
+
+                        <div class="skill-tags">
+
+                            ${offeredHTML}
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="request-skills">
+
+                        <strong>
+                            Skills Wanted
+                        </strong>
+
+                        <div class="skill-tags">
+
+                            ${wantedHTML}
+
+                        </div>
+
+                    </div>
+
+
+
+                    <p class="request-message">
+
+                        ${escapeHTML(
+                            request.message ||
+                            "I'd like to exchange skills with you!"
+                        )}
+
+                    </p>
+
+
+
+                    ${actionHTML}
+
+                `;
+
+
+                receivedRequests.appendChild(
+                    card
+                );
+
+            }
+
+
+            addRequestButtonListeners();
+
+        }
+
+
+
+        /* =====================================
+           DISPLAY SENT REQUESTS
+        ====================================== */
+
+        async function displaySent(
+            requests
+        ) {
+
+            sentRequests.innerHTML = "";
+
+
+            if (
+                requests.length === 0
+            ) {
+
+                sentRequests.innerHTML = `
+
+                    <div class="empty-requests">
+
+                        <div>
+                            📤
+                        </div>
+
+                        <h3>
+                            No sent requests
+                        </h3>
+
+                        <p>
+                            Find a skill partner from
+                            the dashboard and send them
+                            a request.
+                        </p>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+
+            for (
+                const request of requests
+            ) {
+
+                const receiver =
+                    await getUser(
+                        request.toUserId
+                    );
+
+
+                const receiverName =
+                    receiver?.name ||
+                    "SkillSwap User";
+
+
+                const status =
+                    request.status ||
+                    "pending";
+
+
+                const statusClass =
+                    status.toLowerCase();
+
+
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                card.className =
+                    "request-card";
+
+
+
+                /* =====================================
+                   SENT REQUEST ACTION
+                ====================================== */
+
+                let sentActionHTML = "";
+
+
+
+                /*
+                 Allow deletion of
+                 pending or rejected requests.
+                */
+
+                if (
+                    status === "pending" ||
+                    status === "rejected"
+                ) {
+
+                    sentActionHTML = `
+
+                        <div class="request-actions">
+
+                            <button
+                                class="delete-btn"
+                                data-id="${request.id}"
+                            >
+                                Delete Request
+                            </button>
+
+                        </div>
+
+                    `;
+
+                }
+
+
+
+                /* =====================================
+                   SENT CARD
+                ====================================== */
+
+                card.innerHTML = `
+
+                    <div class="request-user">
+
+                        <div class="request-avatar">
+
+                            ${escapeHTML(
+                                receiverName
+                                    .charAt(0)
+                                    .toUpperCase()
+                            )}
+
+                        </div>
+
+
+                        <div>
+
+                            <h3>
+                                ${escapeHTML(
+                                    receiverName
+                                )}
+                            </h3>
+
+
+                            <p>
+                                Skill swap request
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div
+                        class="request-status ${statusClass}"
+                    >
+
+                        ${escapeHTML(
+                            status.charAt(0)
+                                .toUpperCase() +
+                            status.slice(1)
+                        )}
+
+                    </div>
+
+
+
+                    ${sentActionHTML}
+
+                `;
+
+
+                sentRequests.appendChild(
+                    card
+                );
+
+            }
+
+
+            addRequestButtonListeners();
+
+        }
+
+
+
+        /* =====================================
+           GET USER
+        ====================================== */
+
+        async function getUser(
+            userId
+        ) {
+
+            try {
+
+                const userSnapshot =
+                    await getDoc(
+                        doc(
+                            db,
+                            "users",
+                            userId
+                        )
+                    );
+
+
+                if (
+                    userSnapshot.exists()
+                ) {
+
+                    return userSnapshot.data();
+
+                }
+
+
+                return null;
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Error getting user:",
+                    error
+                );
+
+                return null;
+
+            }
+
+        }
+
+
+
+        /* =====================================
+           ACCEPT / REJECT / DELETE BUTTONS
+        ====================================== */
+
+        function addRequestButtonListeners() {
+
+
+            /* =====================================
+               ACCEPT BUTTONS
+            ====================================== */
+
+            document
+                .querySelectorAll(
+                    ".accept-btn"
+                )
+                .forEach(
+                    function (button) {
+
+                        button.addEventListener(
+                            "click",
+                            async function () {
+
+                                await updateRequestStatus(
+                                    button.dataset.id,
+                                    "accepted"
+                                );
+
+                            }
+                        );
+
+                    }
+                );
+
+
+
+            /* =====================================
+               REJECT BUTTONS
+            ====================================== */
+
+            document
+                .querySelectorAll(
+                    ".reject-btn"
+                )
+                .forEach(
+                    function (button) {
+
+                        button.addEventListener(
+                            "click",
+                            async function () {
+
+                                await updateRequestStatus(
+                                    button.dataset.id,
+                                    "rejected"
+                                );
+
+                            }
+                        );
+
+                    }
+                );
+
+
+
+            /* =====================================
+               DELETE BUTTONS
+            ====================================== */
+
+            document
+                .querySelectorAll(
+                    ".delete-btn"
+                )
+                .forEach(
+                    function (button) {
+
+                        button.addEventListener(
+                            "click",
+                            async function () {
+
+
+                                const confirmed =
+                                    confirm(
+                                        "Are you sure you want to delete this request?"
+                                    );
+
+
+                                if (
+                                    !confirmed
+                                ) {
+
+                                    return;
+
+                                }
+
+
+
+                                try {
+
+                                    await deleteDoc(
+                                        doc(
+                                            db,
+                                            "swapRequests",
+                                            button.dataset.id
+                                        )
+                                    );
+
+
+                                    alert(
+                                        "Request deleted successfully!"
+                                    );
+
+
+                                    await loadRequests();
+
+                                }
+
+                                catch (error) {
+
+                                    console.error(
+                                        "Error deleting request:",
+                                        error
+                                    );
+
+
+                                    alert(
+                                        "Could not delete request: " +
+                                        error.message
+                                    );
+
+                                }
+
+                            }
+                        );
+
+                    }
+                );
+
+        }
+
+
+
+        /* =====================================
+           UPDATE REQUEST STATUS
+        ====================================== */
+
+        async function updateRequestStatus(
+            requestId,
+            newStatus
+        ) {
+
+            try {
+
+
+                await updateDoc(
+
+                    doc(
+                        db,
+                        "swapRequests",
+                        requestId
+                    ),
+
+                    {
+                        status:
+                            newStatus
+                    }
+
+                );
+
+
+                alert(
+                    newStatus === "accepted"
+                        ? "Request accepted!"
+                        : "Request rejected!"
+                );
+
+
+                await loadRequests();
+
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Error updating request:",
+                    error
+                );
+
+
+                alert(
+                    "Could not update request: " +
+                    error.message
+                );
+
+            }
+
+        }
+
+
+
+        /* =====================================
+           ESCAPE HTML
+        ====================================== */
+
+        function escapeHTML(
+            text
+        ) {
+
+            return String(text)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+    </script>
+
+<script src="theme.js"></script>
+
+</body>
+
+</html>
+```

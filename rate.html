@@ -1,0 +1,940 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Rate Partner - SkillSwap</title>
+
+  <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+  <!-- =====================================
+       NAVBAR
+  ====================================== -->
+
+  <nav class="navbar">
+
+    <div class="logo">
+      SkillSwap
+    </div>
+
+
+    <div class="nav-links">
+
+      <a href="dashboard.html">
+        Dashboard
+      </a>
+
+
+      <a href="profile.html">
+        Profile
+      </a>
+
+
+      <a href="requests.html">
+        Requests
+      </a>
+
+
+      <a href="swaps.html">
+        Active Swaps
+      </a>
+
+
+      <button id="logoutBtn">
+        Logout
+      </button>
+
+    </div>
+
+  </nav>
+
+
+
+  <!-- =====================================
+       MAIN
+  ====================================== -->
+
+  <main class="container">
+
+
+    <div class="page-header">
+
+      <h1>
+        Rate Your Skill Swap
+      </h1>
+
+
+      <p>
+        Share your experience with your swap partner.
+      </p>
+
+    </div>
+
+
+
+    <div id="ratingContainer">
+
+      <div class="empty-state">
+
+        <h3>
+          Loading...
+        </h3>
+
+      </div>
+
+    </div>
+
+
+  </main>
+
+
+
+  <!-- =====================================
+       FIREBASE
+  ====================================== -->
+
+  <script type="module">
+
+
+    /* =====================================
+       FIREBASE IMPORTS
+    ====================================== */
+
+    import {
+      auth,
+      db
+    } from "./firebase.js";
+
+
+    import {
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+
+    import {
+      collection,
+      getDocs,
+      doc,
+      getDoc,
+      addDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+
+
+    /* =====================================
+       ELEMENTS
+    ====================================== */
+
+    const ratingContainer =
+      document.getElementById(
+        "ratingContainer"
+      );
+
+
+    const logoutBtn =
+      document.getElementById(
+        "logoutBtn"
+      );
+
+
+
+    /* =====================================
+       CURRENT USER
+    ====================================== */
+
+    let currentUser = null;
+
+
+
+    /* =====================================
+       CHECK LOGIN
+    ====================================== */
+
+    onAuthStateChanged(
+      auth,
+      async function (user) {
+
+        if (!user) {
+
+          window.location.href =
+            "login.html";
+
+          return;
+
+        }
+
+
+        currentUser = user;
+
+
+        await loadCompletedSwaps();
+
+      }
+    );
+
+
+
+    /* =====================================
+       LOAD COMPLETED SWAPS
+    ====================================== */
+
+    async function loadCompletedSwaps() {
+
+      try {
+
+
+        /* =====================================
+           GET COMPLETED SWAPS
+        ====================================== */
+
+        const snapshot =
+          await getDocs(
+            collection(
+              db,
+              "swapRequests"
+            )
+          );
+
+
+        const completedSwaps = [];
+
+
+        snapshot.forEach(
+          function (requestDoc) {
+
+            const request =
+              requestDoc.data();
+
+
+            if (
+
+              request.status ===
+                "completed"
+
+              &&
+
+              (
+                request.fromUserId ===
+                  currentUser.uid
+
+                ||
+
+                request.toUserId ===
+                  currentUser.uid
+              )
+
+            ) {
+
+              completedSwaps.push({
+
+                id:
+                  requestDoc.id,
+
+                ...request
+
+              });
+
+            }
+
+          }
+        );
+
+
+
+        /* =====================================
+           NO COMPLETED SWAPS
+        ====================================== */
+
+        if (
+          completedSwaps.length === 0
+        ) {
+
+          ratingContainer.innerHTML = `
+
+            <div class="empty-state">
+
+              <h3>
+                No completed swaps yet
+              </h3>
+
+              <p>
+                Complete a skill swap before
+                leaving a rating.
+              </p>
+
+            </div>
+
+          `;
+
+          return;
+
+        }
+
+
+
+        /* =====================================
+           GET EXISTING RATINGS
+        ====================================== */
+
+        const ratingsSnapshot =
+          await getDocs(
+            collection(
+              db,
+              "ratings"
+            )
+          );
+
+
+        const existingRatings = [];
+
+
+        ratingsSnapshot.forEach(
+          function (ratingDoc) {
+
+            const rating =
+              ratingDoc.data();
+
+
+            /*
+             Only look at ratings made
+             by the current user.
+            */
+
+            if (
+              rating.fromUserId ===
+              currentUser.uid
+            ) {
+
+              existingRatings.push(
+                rating
+              );
+
+            }
+
+          }
+        );
+
+
+
+        /* =====================================
+           CLEAR CONTAINER
+        ====================================== */
+
+        ratingContainer.innerHTML = "";
+
+
+
+        /* =====================================
+           DISPLAY EACH COMPLETED SWAP
+        ====================================== */
+
+        for (
+          const swap of completedSwaps
+        ) {
+
+
+          /* =====================================
+             FIND PARTNER
+          ====================================== */
+
+          const partnerId =
+
+            swap.fromUserId ===
+            currentUser.uid
+
+              ? swap.toUserId
+
+              : swap.fromUserId;
+
+
+
+          /* =====================================
+             GET PARTNER
+          ====================================== */
+
+          const partnerDoc =
+            await getDoc(
+              doc(
+                db,
+                "users",
+                partnerId
+              )
+            );
+
+
+          const partner =
+            partnerDoc.exists()
+              ? partnerDoc.data()
+              : {};
+
+
+          const partnerName =
+            partner.name ||
+            "SkillSwap User";
+
+
+
+          /* =====================================
+             CHECK IF ALREADY RATED
+          ====================================== */
+
+          const alreadyRated =
+            existingRatings.some(
+              function (rating) {
+
+                return (
+                  rating.swapId ===
+                  swap.id
+
+                  &&
+
+                  rating.fromUserId ===
+                  currentUser.uid
+
+                  &&
+
+                  rating.toUserId ===
+                  partnerId
+                );
+
+              }
+            );
+
+
+
+          /* =====================================
+             CREATE CARD
+          ====================================== */
+
+          const card =
+            document.createElement(
+              "div"
+            );
+
+
+          card.className =
+            "rating-card";
+
+
+
+          /* =====================================
+             ALREADY RATED
+          ====================================== */
+
+          if (
+            alreadyRated
+          ) {
+
+            card.innerHTML = `
+
+              <div class="rating-header">
+
+                <h2>
+                  ${escapeHTML(
+                    partnerName
+                  )}
+                </h2>
+
+
+                <p>
+                  How was your skill exchange?
+                </p>
+
+              </div>
+
+
+              <div class="rating-status">
+
+                ✓ You already rated this swap.
+
+              </div>
+
+            `;
+
+
+            ratingContainer.appendChild(
+              card
+            );
+
+
+            continue;
+
+          }
+
+
+
+          /* =====================================
+             RATING FORM
+          ====================================== */
+
+          card.innerHTML = `
+
+            <div class="rating-header">
+
+              <h2>
+                Rate ${escapeHTML(
+                  partnerName
+                )}
+              </h2>
+
+
+              <p>
+                How was your skill exchange?
+              </p>
+
+            </div>
+
+
+
+            <div class="rating-form">
+
+
+              <!-- RATING -->
+
+              <label>
+                Rating
+              </label>
+
+
+              <select
+                class="rating-select"
+                data-swap-id="${swap.id}"
+                data-partner-id="${partnerId}"
+              >
+
+                <option value="">
+                  Select rating
+                </option>
+
+
+                <option value="5">
+                  ⭐⭐⭐⭐⭐ Excellent
+                </option>
+
+
+                <option value="4">
+                  ⭐⭐⭐⭐ Very Good
+                </option>
+
+
+                <option value="3">
+                  ⭐⭐⭐ Good
+                </option>
+
+
+                <option value="2">
+                  ⭐⭐ Needs Improvement
+                </option>
+
+
+                <option value="1">
+                  ⭐ Poor
+                </option>
+
+              </select>
+
+
+
+              <!-- FEEDBACK -->
+
+              <label>
+                Feedback
+              </label>
+
+
+              <textarea
+                class="feedback-input"
+                data-swap-id="${swap.id}"
+                placeholder="Write your feedback..."
+                rows="4"
+              ></textarea>
+
+
+
+              <!-- SUBMIT -->
+
+              <button
+                class="submit-rating-btn"
+                data-swap-id="${swap.id}"
+                data-partner-id="${partnerId}"
+              >
+                Submit Rating
+              </button>
+
+
+            </div>
+
+          `;
+
+
+          ratingContainer.appendChild(
+            card
+          );
+
+        }
+
+
+
+        /* =====================================
+           SUBMIT RATING
+        ====================================== */
+
+        document
+          .querySelectorAll(
+            ".submit-rating-btn"
+          )
+          .forEach(
+            function (button) {
+
+              button.addEventListener(
+                "click",
+                async function () {
+
+
+                  const swapId =
+                    button.dataset.swapId;
+
+
+                  const partnerId =
+                    button.dataset.partnerId;
+
+
+
+                  /* =====================================
+                     FIND FORM ELEMENTS
+                  ====================================== */
+
+                  const select =
+                    document.querySelector(
+                      `.rating-select[data-swap-id="${swapId}"]`
+                    );
+
+
+                  const textarea =
+                    document.querySelector(
+                      `.feedback-input[data-swap-id="${swapId}"]`
+                    );
+
+
+
+                  const rating =
+                    Number(
+                      select.value
+                    );
+
+
+                  const feedback =
+                    textarea.value.trim();
+
+
+
+                  /* =====================================
+                     VALIDATE RATING
+                  ====================================== */
+
+                  if (
+                    !rating
+                  ) {
+
+                    alert(
+                      "Please select a rating."
+                    );
+
+                    return;
+
+                  }
+
+
+
+                  /* =====================================
+                     CHECK DUPLICATE AGAIN
+                  ====================================== */
+
+                  try {
+
+
+                    const ratingsSnapshot =
+                      await getDocs(
+                        collection(
+                          db,
+                          "ratings"
+                        )
+                      );
+
+
+                    let alreadyRated =
+                      false;
+
+
+                    ratingsSnapshot.forEach(
+                      function (ratingDoc) {
+
+                        const existingRating =
+                          ratingDoc.data();
+
+
+                        if (
+
+                          existingRating.swapId ===
+                            swapId
+
+                          &&
+
+                          existingRating.fromUserId ===
+                            currentUser.uid
+
+                          &&
+
+                          existingRating.toUserId ===
+                            partnerId
+
+                        ) {
+
+                          alreadyRated = true;
+
+                        }
+
+                      }
+                    );
+
+
+
+                    if (
+                      alreadyRated
+                    ) {
+
+                      alert(
+                        "You have already rated this swap."
+                      );
+
+                      button.disabled =
+                        true;
+
+                      select.disabled =
+                        true;
+
+                      textarea.disabled =
+                        true;
+
+                      button.textContent =
+                        "✓ Already Rated";
+
+                      return;
+
+                    }
+
+
+
+                    /* =====================================
+                       SUBMIT RATING
+                    ====================================== */
+
+                    await addDoc(
+                      collection(
+                        db,
+                        "ratings"
+                      ),
+                      {
+
+                        swapId:
+                          swapId,
+
+                        fromUserId:
+                          currentUser.uid,
+
+                        toUserId:
+                          partnerId,
+
+                        rating:
+                          rating,
+
+                        feedback:
+                          feedback,
+
+                        createdAt:
+                          serverTimestamp()
+
+                      }
+                    );
+
+
+
+                    /* =====================================
+                       SUCCESS
+                    ====================================== */
+
+                    alert(
+                      "Rating submitted successfully!"
+                    );
+
+
+                    button.disabled =
+                      true;
+
+
+                    button.textContent =
+                      "✓ Rating Submitted";
+
+
+                    select.disabled =
+                      true;
+
+
+                    textarea.disabled =
+                      true;
+
+
+
+                  }
+
+                  catch (error) {
+
+                    console.error(
+                      "Error submitting rating:",
+                      error
+                    );
+
+
+                    alert(
+                      "Could not submit rating: " +
+                      error.message
+                    );
+
+                  }
+
+                }
+              );
+
+            }
+          );
+
+
+      }
+
+      catch (error) {
+
+        console.error(
+          "Error loading ratings:",
+          error
+        );
+
+
+        ratingContainer.innerHTML = `
+
+          <div class="empty-state">
+
+            <h3>
+              Could not load completed swaps
+            </h3>
+
+            <p>
+              ${escapeHTML(
+                error.message
+              )}
+            </p>
+
+          </div>
+
+        `;
+
+      }
+
+    }
+
+
+
+    /* =====================================
+       ESCAPE HTML
+    ====================================== */
+
+    function escapeHTML(
+      value
+    ) {
+
+      return String(value)
+
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+
+        .replace(
+          /</g,
+          "&lt;"
+        )
+
+        .replace(
+          />/g,
+          "&gt;"
+        )
+
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+
+
+    /* =====================================
+       LOGOUT
+    ====================================== */
+
+    logoutBtn.addEventListener(
+      "click",
+      async function () {
+
+        try {
+
+          await signOut(
+            auth
+          );
+
+
+          window.location.href =
+            "login.html";
+
+        }
+
+        catch (error) {
+
+          console.error(
+            "Logout error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+  </script>
+
+<script src="theme.js"></script>
+
+</body>
+
+</html>
+```

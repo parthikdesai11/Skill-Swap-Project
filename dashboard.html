@@ -1,0 +1,1312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard - SkillSwap</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ================================
+         NAVBAR
+    ================================= -->
+
+    <nav class="dashboard-navbar">
+
+        <div class="dashboard-logo">
+            SkillSwap
+        </div>
+
+        <div class="dashboard-nav-links">
+
+            <a href="dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="profile.html">
+                Profile
+            </a>
+
+            <a href="requests.html">
+                Requests
+            </a>
+
+            <button
+                id="logoutBtn"
+                class="logout-btn">
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+    <!-- ================================
+         MAIN CONTENT
+    ================================= -->
+
+    <main class="dashboard-container">
+
+
+        <!-- HERO -->
+
+        <section class="dashboard-hero">
+
+            <div class="hero-content">
+
+                <p class="hero-small-text">
+                    Welcome to SkillSwap
+                </p>
+
+                <h1 id="welcomeMessage">
+                    Welcome!
+                </h1>
+
+                <p>
+                    Exchange your skills with people
+                    and learn something new.
+                </p>
+
+                <a
+                    href="#discover"
+                    class="hero-button">
+                    Discover People
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================================
+             STATISTICS
+        ================================= -->
+
+        <section class="stats-grid">
+
+            <div class="stat-card">
+
+                <div class="stat-number"
+                     id="offeredCount">
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Skills Offered
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-number"
+                     id="wantedCount">
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Skills Wanted
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-number">
+                    🔄
+                </div>
+
+                <div class="stat-label">
+                    Skill Swaps
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================================
+             DISCOVER PEOPLE
+        ================================= -->
+
+        <section
+            class="discover-section"
+            id="discover">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <p class="hero-small-text">
+                        Find your match
+                    </p>
+
+                    <h2>
+                        Discover People
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- SEARCH -->
+
+            <div class="search-box">
+
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search by skill..."
+                >
+
+            </div>
+
+
+            <!-- USERS -->
+
+            <div
+                id="usersContainer"
+                class="users-grid">
+
+                <div class="loading-text">
+                    Loading skill partners...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================================
+             HOW IT WORKS
+        ================================= -->
+
+        <section class="how-section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <p class="hero-small-text">
+                        Simple process
+                    </p>
+
+                    <h2>
+                        How SkillSwap Works
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="steps-grid">
+
+                <div class="step-card">
+
+                    <div class="step-number">
+                        1
+                    </div>
+
+                    <h3>
+                        Create Your Profile
+                    </h3>
+
+                    <p>
+                        Add the skills you can teach
+                        and the skills you want to learn.
+                    </p>
+
+                </div>
+
+
+                <div class="step-card">
+
+                    <div class="step-number">
+                        2
+                    </div>
+
+                    <h3>
+                        Find People
+                    </h3>
+
+                    <p>
+                        Discover people who have
+                        skills that match your interests.
+                    </p>
+
+                </div>
+
+
+                <div class="step-card">
+
+                    <div class="step-number">
+                        3
+                    </div>
+
+                    <h3>
+                        Start Swapping
+                    </h3>
+
+                    <p>
+                        Send a request and start
+                        exchanging knowledge.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ================================
+         FOOTER
+    ================================= -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            © 2026 SkillSwap. Learn. Teach. Connect.
+        </p>
+
+    </footer>
+
+
+
+    <!-- ================================
+         FIREBASE + DASHBOARD SCRIPT
+    ================================= -->
+
+    <script type="module">
+
+        /* =====================================
+           FIREBASE IMPORTS
+        ====================================== */
+
+        import {
+            auth,
+            db
+        } from "./firebase.js";
+
+
+        import {
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+
+        import {
+            collection,
+            getDocs,
+            getDoc,
+            doc,
+            addDoc,
+            query,
+            where,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+
+
+        /* =====================================
+           ELEMENTS
+        ====================================== */
+
+        const usersContainer =
+            document.getElementById(
+                "usersContainer"
+            );
+
+
+        const searchInput =
+            document.getElementById(
+                "searchInput"
+            );
+
+
+        const welcomeMessage =
+            document.getElementById(
+                "welcomeMessage"
+            );
+
+
+        const offeredCount =
+            document.getElementById(
+                "offeredCount"
+            );
+
+
+        const wantedCount =
+            document.getElementById(
+                "wantedCount"
+            );
+
+
+        const logoutBtn =
+            document.getElementById(
+                "logoutBtn"
+            );
+
+
+
+        /* =====================================
+           VARIABLES
+        ====================================== */
+
+        let allUsers = [];
+
+
+
+        /* =====================================
+           AUTHENTICATION
+        ====================================== */
+
+        onAuthStateChanged(
+            auth,
+            async function (user) {
+
+                if (!user) {
+
+                    window.location.href =
+                        "login.html";
+
+                    return;
+                }
+
+
+                console.log(
+                    "Logged in user:",
+                    user.uid
+                );
+
+
+                await loadCurrentUser(
+                    user.uid
+                );
+
+
+                await loadUsers(
+                    user.uid
+                );
+
+            }
+        );
+
+
+
+        /* =====================================
+           LOAD CURRENT USER
+        ====================================== */
+
+        async function loadCurrentUser(
+            userId
+        ) {
+
+            try {
+
+                const userDocument =
+                    await getDoc(
+                        doc(
+                            db,
+                            "users",
+                            userId
+                        )
+                    );
+
+
+                if (
+                    !userDocument.exists()
+                ) {
+
+                    welcomeMessage.textContent =
+                        "Welcome!";
+
+                    return;
+                }
+
+
+                const userData =
+                    userDocument.data();
+
+
+                welcomeMessage.textContent =
+                    `Welcome, ${userData.name || "User"}!`;
+
+
+                const skillsOffered =
+                    Array.isArray(
+                        userData.skillsOffered
+                    )
+                        ? userData.skillsOffered
+                        : [];
+
+
+                const skillsWanted =
+                    Array.isArray(
+                        userData.skillsWanted
+                    )
+                        ? userData.skillsWanted
+                        : [];
+
+
+                offeredCount.textContent =
+                    skillsOffered.length;
+
+
+                wantedCount.textContent =
+                    skillsWanted.length;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error loading current user:",
+                    error
+                );
+
+            }
+
+        }
+
+
+
+        /* =====================================
+           LOAD ALL OTHER USERS
+        ====================================== */
+
+        async function loadUsers(
+            currentUserId
+        ) {
+
+            try {
+
+                console.log(
+                    "Current user:",
+                    currentUserId
+                );
+
+
+                const usersSnapshot =
+                    await getDocs(
+                        collection(
+                            db,
+                            "users"
+                        )
+                    );
+
+
+                console.log(
+                    "Total users found:",
+                    usersSnapshot.size
+                );
+
+
+                allUsers = [];
+
+
+                usersSnapshot.forEach(
+                    function (userDocument) {
+
+                        const user =
+                            userDocument.data();
+
+
+                        console.log(
+                            "User found:",
+                            userDocument.id,
+                            user
+                        );
+
+
+                        /*
+                         Do not show
+                         the logged-in user.
+                        */
+
+                        if (
+                            userDocument.id !==
+                            currentUserId
+                        ) {
+
+                            /*
+                             Only show public
+                             profiles.
+                             
+                             Supports both
+                             boolean true and
+                             string "true".
+                            */
+
+                            const isPublic =
+                                user.isPublic === true ||
+                                user.isPublic === "true";
+
+
+                            if (isPublic) {
+
+                                allUsers.push({
+
+                                    id:
+                                        userDocument.id,
+
+                                    ...user
+
+                                });
+
+                            }
+
+                        }
+
+                    }
+                );
+
+
+                console.log(
+                    "Users to display:",
+                    allUsers
+                );
+
+
+                displayUsers(
+                    allUsers
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "ERROR LOADING USERS:",
+                    error
+                );
+
+
+                usersContainer.innerHTML = `
+
+                    <div class="no-users">
+
+                        <h3>
+                            Could not load users
+                        </h3>
+
+                        <p>
+                            ${escapeHTML(
+                                error.message
+                            )}
+                        </p>
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+
+
+        /* =====================================
+           DISPLAY USERS
+        ====================================== */
+
+        function displayUsers(
+            users
+        ) {
+
+            if (
+                !usersContainer
+            ) {
+
+                console.error(
+                    "usersContainer not found."
+                );
+
+                return;
+
+            }
+
+
+            if (
+                users.length === 0
+            ) {
+
+                usersContainer.innerHTML = `
+
+                    <div class="no-users">
+
+                        <h3>
+                            👥 No skill partners yet
+                        </h3>
+
+                        <p>
+                            Other users will appear
+                            here when they create
+                            public profiles.
+                        </p>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+            usersContainer.innerHTML =
+                users.map(
+                    function (user) {
+
+
+                        const offeredSkills =
+                            Array.isArray(
+                                user.skillsOffered
+                            )
+                                ? user.skillsOffered
+                                : [];
+
+
+                        const wantedSkills =
+                            Array.isArray(
+                                user.skillsWanted
+                            )
+                                ? user.skillsWanted
+                                : [];
+
+
+                        const firstLetter =
+                            (
+                                user.name ||
+                                "U"
+                            )
+                                .charAt(0)
+                                .toUpperCase();
+
+
+                        const offeredHTML =
+                            offeredSkills.length > 0
+
+                                ?
+
+                                offeredSkills
+                                    .map(
+                                        function (
+                                            skill
+                                        ) {
+
+                                            return `
+                                                <span class="skill-tag">
+                                                    ${escapeHTML(
+                                                        skill
+                                                    )}
+                                                </span>
+                                            `;
+
+                                        }
+                                    )
+                                    .join("")
+
+                                :
+
+                                `
+                                    <span class="no-skill-text">
+                                        No skills added
+                                    </span>
+                                `;
+
+
+                        const wantedHTML =
+                            wantedSkills.length > 0
+
+                                ?
+
+                                wantedSkills
+                                    .map(
+                                        function (
+                                            skill
+                                        ) {
+
+                                            return `
+                                                <span class="skill-tag">
+                                                    ${escapeHTML(
+                                                        skill
+                                                    )}
+                                                </span>
+                                            `;
+
+                                        }
+                                    )
+                                    .join("")
+
+                                :
+
+                                `
+                                    <span class="no-skill-text">
+                                        No skills added
+                                    </span>
+                                `;
+
+
+                        return `
+
+                            <div class="user-card">
+
+                                <div class="user-avatar">
+                                    ${firstLetter}
+                                </div>
+
+
+                                <h3>
+                                    ${escapeHTML(
+                                        user.name ||
+                                        "SkillSwap User"
+                                    )}
+                                </h3>
+
+
+                                <p class="user-bio">
+
+                                    ${escapeHTML(
+                                        user.bio ||
+                                        "No bio added yet."
+                                    )}
+
+                                </p>
+
+
+                                <div class="user-skills">
+
+                                    <strong>
+                                        Skills Offered
+                                    </strong>
+
+                                    <div class="skill-tags">
+
+                                        ${offeredHTML}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="user-skills">
+
+                                    <strong>
+                                        Skills Wanted
+                                    </strong>
+
+                                    <div class="skill-tags">
+
+                                        ${wantedHTML}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!--
+                                    IMPORTANT:
+                                    This data-user-id matches
+                                    the event listener below.
+                                -->
+
+                                <button
+                                    class="request-btn"
+                                    data-user-id="${user.id}">
+
+                                    Send Swap Request
+
+                                </button>
+
+                            </div>
+
+                        `;
+
+                    }
+                )
+                .join("");
+
+        }
+
+
+
+        /* =====================================
+           SEARCH USERS
+        ====================================== */
+
+        searchInput.addEventListener(
+            "input",
+            function () {
+
+                const searchTerm =
+                    searchInput.value
+                        .trim()
+                        .toLowerCase();
+
+
+                if (
+                    searchTerm === ""
+                ) {
+
+                    displayUsers(
+                        allUsers
+                    );
+
+                    return;
+
+                }
+
+
+                const filteredUsers =
+                    allUsers.filter(
+                        function (user) {
+
+                            const offered =
+                                Array.isArray(
+                                    user.skillsOffered
+                                )
+                                    ? user.skillsOffered
+                                    : [];
+
+
+                            const wanted =
+                                Array.isArray(
+                                    user.skillsWanted
+                                )
+                                    ? user.skillsWanted
+                                    : [];
+
+
+                            const offeredMatch =
+                                offered.some(
+                                    function (
+                                        skill
+                                    ) {
+
+                                        return String(
+                                            skill
+                                        )
+                                            .toLowerCase()
+                                            .includes(
+                                                searchTerm
+                                            );
+
+                                    }
+                                );
+
+
+                            const wantedMatch =
+                                wanted.some(
+                                    function (
+                                        skill
+                                    ) {
+
+                                        return String(
+                                            skill
+                                        )
+                                            .toLowerCase()
+                                            .includes(
+                                                searchTerm
+                                            );
+
+                                    }
+                                );
+
+
+                            const nameMatch =
+                                String(
+                                    user.name || ""
+                                )
+                                    .toLowerCase()
+                                    .includes(
+                                        searchTerm
+                                    );
+
+
+                            return (
+                                offeredMatch ||
+                                wantedMatch ||
+                                nameMatch
+                            );
+
+                        }
+                    );
+
+
+                displayUsers(
+                    filteredUsers
+                );
+
+            }
+        );
+
+
+
+        /* =====================================
+           SEND SWAP REQUEST
+        ====================================== */
+
+        usersContainer.addEventListener(
+            "click",
+            async function (event) {
+
+
+                const button =
+                    event.target.closest(
+                        ".request-btn"
+                    );
+
+
+                if (!button) {
+
+                    return;
+
+                }
+
+
+                const targetUserId =
+                    button.dataset.userId;
+
+
+                if (!targetUserId) {
+
+                    alert(
+                        "User ID is missing."
+                    );
+
+                    return;
+
+                }
+
+
+                const currentUser =
+                    auth.currentUser;
+
+
+                if (!currentUser) {
+
+                    alert(
+                        "Please login first."
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                 Prevent sending request
+                 to yourself.
+                */
+
+                if (
+                    targetUserId ===
+                    currentUser.uid
+                ) {
+
+                    alert(
+                        "You cannot send a request to yourself."
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                 Disable button while
+                 request is being processed.
+                */
+
+                button.disabled = true;
+
+                button.textContent =
+                    "Sending...";
+
+
+                try {
+
+
+                    /*
+                     Check whether a pending
+                     request already exists.
+                    */
+
+                    const requestQuery =
+                        query(
+
+                            collection(
+                                db,
+                                "swapRequests"
+                            ),
+
+                            where(
+                                "fromUserId",
+                                "==",
+                                currentUser.uid
+                            ),
+
+                            where(
+                                "toUserId",
+                                "==",
+                                targetUserId
+                            ),
+
+                            where(
+                                "status",
+                                "==",
+                                "pending"
+                            )
+
+                        );
+
+
+                    const existingRequests =
+                        await getDocs(
+                            requestQuery
+                        );
+
+
+                    if (
+                        !existingRequests.empty
+                    ) {
+
+                        button.textContent =
+                            "Request Sent";
+
+
+                        alert(
+                            "You have already sent a request to this user."
+                        );
+
+
+                        return;
+
+                    }
+
+
+                    /*
+                     Get current user's
+                     profile.
+                    */
+
+                    const currentUserDoc =
+                        await getDoc(
+
+                            doc(
+                                db,
+                                "users",
+                                currentUser.uid
+                            )
+
+                        );
+
+
+                    const currentUserData =
+                        currentUserDoc.exists()
+
+                            ?
+
+                            currentUserDoc.data()
+
+                            :
+
+                            {};
+
+
+                    const offeredSkills =
+                        Array.isArray(
+                            currentUserData.skillsOffered
+                        )
+
+                            ?
+
+                            currentUserData.skillsOffered
+
+                            :
+
+                            [];
+
+
+                    const wantedSkills =
+                        Array.isArray(
+                            currentUserData.skillsWanted
+                        )
+
+                            ?
+
+                            currentUserData.skillsWanted
+
+                            :
+
+                            [];
+
+
+                    /*
+                     Create request.
+                    */
+
+                    await addDoc(
+
+                        collection(
+                            db,
+                            "swapRequests"
+                        ),
+
+                        {
+
+                            fromUserId:
+                                currentUser.uid,
+
+                            toUserId:
+                                targetUserId,
+
+                            status:
+                                "pending",
+
+                            skillsOffered:
+                                offeredSkills,
+
+                            skillsWanted:
+                                wantedSkills,
+
+                            message:
+                                "I'd like to exchange skills with you!",
+
+                            createdAt:
+                                serverTimestamp()
+
+                        }
+
+                    );
+
+
+                    button.textContent =
+                        "Request Sent";
+
+
+                    alert(
+                        "Swap request sent successfully!"
+                    );
+
+
+                } catch (error) {
+
+
+                    console.error(
+                        "Error sending swap request:",
+                        error
+                    );
+
+
+                    button.disabled =
+                        false;
+
+
+                    button.textContent =
+                        "Send Swap Request";
+
+
+                    alert(
+                        "Could not send the request: " +
+                        error.message
+                    );
+
+                }
+
+            }
+        );
+
+
+
+        /* =====================================
+           LOGOUT
+        ====================================== */
+
+        logoutBtn.addEventListener(
+            "click",
+            async function () {
+
+                try {
+
+                    await signOut(
+                        auth
+                    );
+
+
+                    window.location.href =
+                        "login.html";
+
+
+                } catch (error) {
+
+                    console.error(
+                        "Logout error:",
+                        error
+                    );
+
+                    alert(
+                        "Could not logout."
+                    );
+
+                }
+
+            }
+        );
+
+
+
+        /* =====================================
+           ESCAPE HTML
+        ====================================== */
+
+        function escapeHTML(
+            text
+        ) {
+
+            return String(text)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+    </script>
+
+<script src="theme.js"></script>
+
+</body>
+</html>

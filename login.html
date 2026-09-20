@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login - SkillSwap</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-page">
+
+    <div class="auth-container">
+
+        <!-- Left Side -->
+        <div class="auth-info">
+
+            <a href="index.html" class="auth-logo">
+                Skill<span>Swap</span>
+            </a>
+
+            <h1>
+                Welcome<br>
+                back.
+            </h1>
+
+            <p>
+                Log in to continue learning, sharing,
+                and connecting with your skill partners.
+            </p>
+
+            <div class="auth-points">
+
+                <div>
+                    <span>✓</span>
+                    Discover new skills
+                </div>
+
+                <div>
+                    <span>✓</span>
+                    Connect with skill partners
+                </div>
+
+                <div>
+                    <span>✓</span>
+                    Manage your skill swaps
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Login Form -->
+        <div class="auth-form-container">
+
+            <div class="auth-form">
+
+                <h2>Welcome back</h2>
+
+                <p class="form-subtitle">
+                    Login to your SkillSwap account.
+                </p>
+
+
+                <form id="loginForm">
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="you@example.com"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Enter your password"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="auth-submit"
+                    >
+                        Login
+                    </button>
+
+                </form>
+
+
+                <p class="auth-switch">
+
+                    Don't have an account?
+
+                    <a href="signup.html">
+                        Create Account
+                    </a>
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script type="module">
+
+        import { auth } from "./firebase.js";
+
+        import {
+            signInWithEmailAndPassword
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+
+        const loginForm =
+            document.getElementById("loginForm");
+
+
+        loginForm.addEventListener("submit", async (event) => {
+
+            event.preventDefault();
+
+
+            const email =
+                document.getElementById("email").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+
+            try {
+
+                await signInWithEmailAndPassword(
+                    auth,
+                    email,
+                    password
+                );
+
+
+                alert("Login successful!");
+
+
+                window.location.href =
+                    "dashboard.html";
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(error.message);
+
+            }
+
+        });
+
+    </script>
+
+<script src="theme.js"></script>
+
+</body>
+
+</html>

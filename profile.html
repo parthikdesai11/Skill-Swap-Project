@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>My Profile - SkillSwap</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+
+  <nav class="dashboard-navbar">
+
+```
+<div class="dashboard-logo">
+  SkillSwap
+</div>
+
+<div class="dashboard-nav-links">
+  <a href="dashboard.html">Dashboard</a>
+  <a href="profile.html">My Profile</a>
+  <a href="requests.html">Requests</a>
+  <a href="swaps.html">Active Swaps</a>
+
+  <button id="logoutBtn" class="logout-btn">
+    Logout
+  </button>
+</div>
+
+
+  </nav>
+
+  <!-- MAIN CONTENT -->
+
+  <main class="dashboard-container">
+
+
+<div class="page-header">
+  <h1>My Profile</h1>
+  <p>Manage your SkillSwap profile and skills.</p>
+</div>
+
+
+<!-- PROFILE FORM -->
+<form id="profileForm">
+
+  <!-- BASIC INFORMATION -->
+  <section class="dashboard-card">
+
+    <h2>Basic Information</h2>
+
+    <div class="form-group">
+      <label for="name">Name</label>
+
+      <input
+        type="text"
+        id="name"
+        placeholder="Enter your name"
+        required
+      >
+    </div>
+
+
+    <div class="form-group">
+
+      <label for="bio">
+        About Me
+      </label>
+
+      <textarea
+        id="bio"
+        rows="4"
+        placeholder="Tell others about yourself..."
+      ></textarea>
+
+    </div>
+
+  </section>
+
+
+  <!-- SKILLS -->
+  <section class="dashboard-card">
+
+    <h2>Skills</h2>
+
+    <div class="form-group">
+
+      <label for="skillsOffered">
+        Skills I Can Teach
+      </label>
+
+      <input
+        type="text"
+        id="skillsOffered"
+        placeholder="Example: JavaScript, Photoshop, Excel"
+      >
+
+      <small>
+        Separate multiple skills with commas.
+      </small>
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label for="skillsWanted">
+        Skills I Want to Learn
+      </label>
+
+      <input
+        type="text"
+        id="skillsWanted"
+        placeholder="Example: Python, UI Design, Photography"
+      >
+
+      <small>
+        Separate multiple skills with commas.
+      </small>
+
+    </div>
+
+
+    <!-- RATING SUMMARY -->
+    <div
+      class="rating-summary"
+      id="ratingSummary"
+    >
+
+      <h3>⭐ My Rating</h3>
+
+      <div id="ratingContent">
+
+        <p>
+          Loading ratings...
+        </p>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- AVAILABILITY -->
+  <section class="dashboard-card">
+
+    <h2>Availability</h2>
+
+    <div class="form-group">
+
+      <label for="availability">
+        When are you available?
+      </label>
+
+      <input
+        type="text"
+        id="availability"
+        placeholder="Example: Weekends, Evenings"
+      >
+
+    </div>
+
+  </section>
+
+
+  <!-- PRIVACY -->
+  <section class="dashboard-card">
+
+    <h2>Privacy</h2>
+
+    <div class="form-group">
+
+      <label>
+
+        <input
+          type="checkbox"
+          id="isPublic"
+        >
+
+        Make my profile visible to other users
+
+      </label>
+
+    </div>
+
+  </section>
+
+
+  <!-- SAVE -->
+  <button
+    type="submit"
+    class="primary-btn"
+  >
+    Save Profile
+  </button>
+
+</form>
+```
+
+  </main>
+
+  <!-- FIREBASE -->
+
+  <script type="module">
+
+    import { auth, db } from "./firebase.js";
+
+    import {
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+    import {
+      doc,
+      getDoc,
+      setDoc,
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+
+    const profileForm = document.getElementById("profileForm");
+
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    let currentUser = null;
+
+
+    /* =========================================
+       AUTH STATE
+    ========================================= */
+
+    onAuthStateChanged(auth, async (user) => {
+
+      if (!user) {
+
+        window.location.href = "login.html";
+
+        return;
+      }
+
+      currentUser = user;
+
+      await loadProfile();
+
+      await loadRatings();
+
+    });
+
+
+    /* =========================================
+       LOAD PROFILE
+    ========================================= */
+
+    async function loadProfile() {
+
+      try {
+
+        const userRef = doc(
+          db,
+          "users",
+          currentUser.uid
+        );
+
+        const userSnap = await getDoc(userRef);
+
+
+        if (userSnap.exists()) {
+
+          const data = userSnap.data();
+
+
+          document.getElementById("name").value =
+            data.name || currentUser.displayName || "";
+
+          document.getElementById("bio").value =
+            data.bio || "";
+
+          document.getElementById("skillsOffered").value =
+            Array.isArray(data.skillsOffered)
+              ? data.skillsOffered.join(", ")
+              : data.skillsOffered || "";
+
+          document.getElementById("skillsWanted").value =
+            Array.isArray(data.skillsWanted)
+              ? data.skillsWanted.join(", ")
+              : data.skillsWanted || "";
+
+          document.getElementById("availability").value =
+            data.availability || "";
+
+          document.getElementById("isPublic").checked =
+            data.isPublic === true;
+
+        }
+
+      } catch (error) {
+
+        console.error("Error loading profile:", error);
+
+        alert("Could not load your profile.");
+
+      }
+
+    }
+
+
+    /* =========================================
+       SAVE PROFILE
+    ========================================= */
+
+    profileForm.addEventListener(
+      "submit",
+      async function (event) {
+
+        event.preventDefault();
+
+
+        const name =
+          document.getElementById("name").value.trim();
+
+
+        const bio =
+          document.getElementById("bio").value.trim();
+
+
+        const skillsOffered =
+          document
+            .getElementById("skillsOffered")
+            .value
+            .split(",")
+            .map(skill => skill.trim())
+            .filter(skill => skill !== "");
+
+
+        const skillsWanted =
+          document
+            .getElementById("skillsWanted")
+            .value
+            .split(",")
+            .map(skill => skill.trim())
+            .filter(skill => skill !== "");
+
+
+        const availability =
+          document
+            .getElementById("availability")
+            .value
+            .trim();
+
+
+        const isPublic =
+          document.getElementById("isPublic").checked;
+
+
+        try {
+
+          await setDoc(
+            doc(db, "users", currentUser.uid),
+            {
+
+              name,
+
+              bio,
+
+              skillsOffered,
+
+              skillsWanted,
+
+              availability,
+
+              isPublic
+
+            },
+            {
+              merge: true
+            }
+          );
+
+
+          alert("Profile saved successfully!");
+
+        } catch (error) {
+
+          console.error("Error saving profile:", error);
+
+          alert("Could not save your profile.");
+
+        }
+
+      }
+    );
+
+
+    /* =========================================
+       LOAD RATINGS
+    ========================================= */
+
+    async function loadRatings() {
+
+      const ratingContent =
+        document.getElementById("ratingContent");
+
+
+      try {
+
+        const snapshot =
+          await getDocs(
+            collection(db, "ratings")
+          );
+
+
+        const ratings = [];
+
+
+        snapshot.forEach((ratingDoc) => {
+
+          const rating =
+            ratingDoc.data();
+
+
+          if (
+            rating.toUserId === currentUser.uid
+          ) {
+
+            ratings.push(rating);
+
+          }
+
+        });
+
+
+        /* NO RATINGS */
+
+        if (ratings.length === 0) {
+
+          ratingContent.innerHTML = `
+            <div class="rating-empty">
+              <p>⭐ No ratings yet</p>
+              <small>
+                Complete skill swaps to receive ratings.
+              </small>
+            </div>
+          `;
+
+          return;
+
+        }
+
+
+        /* CALCULATE AVERAGE */
+
+        const total =
+          ratings.reduce(
+            (sum, item) =>
+              sum + Number(item.rating || 0),
+            0
+          );
+
+
+        const average =
+          total / ratings.length;
+
+
+        const roundedAverage =
+          average.toFixed(1);
+
+
+        /* CREATE STARS */
+
+        const fullStars =
+          Math.round(average);
+
+
+        let stars = "";
+
+
+        for (let i = 1; i <= 5; i++) {
+
+          stars +=
+            i <= fullStars
+              ? "⭐"
+              : "☆";
+
+        }
+
+
+        /* FEEDBACK */
+
+        const feedbackHTML =
+          ratings
+            .filter(
+              item =>
+                item.feedback &&
+                item.feedback.trim() !== ""
+            )
+            .slice(-5)
+            .reverse()
+            .map(
+              item => `
+                <div class="rating-feedback">
+
+                  <div class="feedback-stars">
+                    ${"⭐".repeat(
+                      Number(item.rating || 0)
+                    )}
+                  </div>
+
+                  <p>
+                    ${escapeHTML(item.feedback)}
+                  </p>
+
+                </div>
+              `
+            )
+            .join("");
+
+
+        ratingContent.innerHTML = `
+
+          <div class="rating-main">
+
+            <div class="rating-score">
+              ${roundedAverage}
+            </div>
+
+            <div>
+
+              <div class="rating-stars">
+                ${stars}
+              </div>
+
+              <p>
+                Based on ${ratings.length}
+                ${ratings.length === 1
+                  ? "review"
+                  : "reviews"}
+              </p>
+
+            </div>
+
+          </div>
+
+
+          ${
+            feedbackHTML
+              ? `
+                <div class="rating-feedback-section">
+
+                  <h4>Recent Feedback</h4>
+
+                  ${feedbackHTML}
+
+                </div>
+              `
+              : ""
+          }
+
+        `;
+
+      } catch (error) {
+
+        console.error(
+          "Error loading ratings:",
+          error
+        );
+
+
+        ratingContent.innerHTML = `
+
+          <p>
+            Could not load ratings.
+          </p>
+
+        `;
+
+      }
+
+    }
+
+
+    /* =========================================
+       ESCAPE HTML
+    ========================================= */
+
+    function escapeHTML(value) {
+
+      return String(value)
+
+        .replace(/&/g, "&amp;")
+
+        .replace(/</g, "&lt;")
+
+        .replace(/>/g, "&gt;")
+
+        .replace(/"/g, "&quot;")
+
+        .replace(/'/g, "&#039;");
+
+    }
+
+
+    /* =========================================
+       LOGOUT
+    ========================================= */
+
+    logoutBtn.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          await signOut(auth);
+
+          window.location.href =
+            "login.html";
+
+        } catch (error) {
+
+          console.error(error);
+
+          alert("Could not logout.");
+
+        }
+
+      }
+    );
+
+  </script>
+
+<script src="theme.js"></script>
+
+</body>
+</html>

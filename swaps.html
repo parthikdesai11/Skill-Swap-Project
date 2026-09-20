@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Active Swaps - SkillSwap</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- NAVBAR -->
+
+    <nav class="dashboard-navbar">
+
+        <div class="dashboard-logo">
+            Skill<span>Swap</span>
+        </div>
+
+
+        <div class="dashboard-nav-links">
+
+            <a href="dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="profile.html">
+                My Profile
+            </a>
+
+            <a href="requests.html">
+                Requests
+            </a>
+
+            <a
+                href="swaps.html"
+                class="active"
+            >
+                Active Swaps
+            </a>
+
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- MAIN -->
+
+    <main class="profile-container">
+
+        <div class="profile-heading">
+
+            <p class="section-label">
+                SKILL EXCHANGE
+            </p>
+
+            <h1>
+                Active Swaps
+            </h1>
+
+            <p>
+                Manage your accepted skill exchanges.
+            </p>
+
+        </div>
+
+
+        <div id="swapsContainer">
+
+            <div class="empty-state">
+
+                <h3>
+                    Loading swaps...
+                </h3>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+
+    <!-- FIREBASE -->
+
+    <script type="module">
+
+        import {
+            auth,
+            db
+        } from "./firebase.js";
+
+
+        import {
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+
+        import {
+            collection,
+            getDocs,
+            doc,
+            getDoc,
+            updateDoc
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+
+
+        const swapsContainer =
+            document.getElementById(
+                "swapsContainer"
+            );
+
+
+        const logoutBtn =
+            document.getElementById(
+                "logoutBtn"
+            );
+
+
+
+        // =========================
+        // AUTHENTICATION
+        // =========================
+
+        onAuthStateChanged(
+            auth,
+            async (user) => {
+
+                if (!user) {
+
+                    window.location.href =
+                        "login.html";
+
+                    return;
+
+                }
+
+
+                await loadActiveSwaps(
+                    user.uid
+                );
+
+            }
+        );
+
+
+
+        // =========================
+        // LOAD ACTIVE SWAPS
+        // =========================
+
+        async function loadActiveSwaps(
+            currentUserId
+        ) {
+
+            try {
+
+                const snapshot =
+                    await getDocs(
+                        collection(
+                            db,
+                            "swapRequests"
+                        )
+                    );
+
+
+                const activeSwaps = [];
+
+
+                snapshot.forEach(
+                    (requestDoc) => {
+
+                        const request =
+                            requestDoc.data();
+
+
+                        if (
+
+                            request.status ===
+                            "accepted"
+
+                            &&
+
+                            (
+                                request.fromUserId ===
+                                currentUserId
+
+                                ||
+
+                                request.toUserId ===
+                                currentUserId
+                            )
+
+                        ) {
+
+                            activeSwaps.push({
+
+                                id:
+                                    requestDoc.id,
+
+                                ...request
+
+                            });
+
+                        }
+
+                    }
+                );
+
+
+
+                // NO ACTIVE SWAPS
+
+                if (
+                    activeSwaps.length === 0
+                ) {
+
+                    swapsContainer.innerHTML = `
+
+                        <div class="empty-state">
+
+                            <h3>
+                                No active swaps
+                            </h3>
+
+                            <p>
+                                Accepted skill exchanges
+                                will appear here.
+                            </p>
+
+                        </div>
+
+                    `;
+
+                    return;
+
+                }
+
+
+
+                swapsContainer.innerHTML = "";
+
+
+
+                // DISPLAY SWAPS
+
+                for (
+                    const swap
+                    of activeSwaps
+                ) {
+
+
+                    const otherUserId =
+
+                        swap.fromUserId ===
+                        currentUserId
+
+                            ? swap.toUserId
+
+                            : swap.fromUserId;
+
+
+
+                    const userSnapshot =
+                        await getDoc(
+                            doc(
+                                db,
+                                "users",
+                                otherUserId
+                            )
+                        );
+
+
+
+                    const otherUser =
+                        userSnapshot.exists()
+
+                            ? userSnapshot.data()
+
+                            : {};
+
+
+
+                    const userName =
+                        otherUser.name ||
+                        "SkillSwap User";
+
+
+
+                    const skillsOffered =
+                        Array.isArray(
+                            swap.skillsOffered
+                        )
+
+                            ? swap.skillsOffered
+
+                            : [];
+
+
+
+                    const skillsWanted =
+                        Array.isArray(
+                            swap.skillsWanted
+                        )
+
+                            ? swap.skillsWanted
+
+                            : [];
+
+
+
+                    const card =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    card.className =
+                        "swap-card";
+
+
+
+                    card.innerHTML = `
+
+                        <div
+                            class="swap-card-header"
+                        >
+
+                            <div>
+
+                                <h2>
+                                    ${escapeHTML(
+                                        userName
+                                    )}
+                                </h2>
+
+                                <span
+                                    class="request-status accepted"
+                                >
+                                    ✓ Active Swap
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="swap-details">
+
+
+                            <div class="swap-section">
+
+                                <h4>
+                                    Skills Offered
+                                </h4>
+
+                                <div
+                                    class="skill-list"
+                                >
+
+                                    ${
+                                        skillsOffered.length
+                                            ? skillsOffered
+                                                .map(
+                                                    skill =>
+                                                        `
+                                                        <span
+                                                            class="skill-tag"
+                                                        >
+                                                            ${escapeHTML(
+                                                                skill
+                                                            )}
+                                                        </span>
+                                                        `
+                                                )
+                                                .join("")
+
+                                            : "<p>No skills listed</p>"
+                                    }
+
+                                </div>
+
+                            </div>
+
+
+
+                            <div class="swap-section">
+
+                                <h4>
+                                    Skills Wanted
+                                </h4>
+
+                                <div
+                                    class="skill-list"
+                                >
+
+                                    ${
+                                        skillsWanted.length
+                                            ? skillsWanted
+                                                .map(
+                                                    skill =>
+                                                        `
+                                                        <span
+                                                            class="skill-tag"
+                                                        >
+                                                            ${escapeHTML(
+                                                                skill
+                                                            )}
+                                                        </span>
+                                                        `
+                                                )
+                                                .join("")
+
+                                            : "<p>No skills listed</p>"
+                                    }
+
+                                </div>
+
+                            </div>
+
+
+                        </div>
+
+
+
+                        <div class="swap-actions">
+
+                            <button
+                                class="complete-btn"
+                                data-swap-id="${swap.id}"
+                            >
+                                Complete Swap
+                            </button>
+
+                        </div>
+
+                    `;
+
+
+
+                    swapsContainer.appendChild(
+                        card
+                    );
+
+                }
+
+
+
+                // =========================
+                // COMPLETE SWAP
+                // =========================
+
+                document
+                    .querySelectorAll(
+                        ".complete-btn"
+                    )
+                    .forEach(
+                        (button) => {
+
+                            button.addEventListener(
+                                "click",
+                                async () => {
+
+                                    const swapId =
+                                        button.dataset
+                                            .swapId;
+
+
+
+                                    const confirmed =
+                                        confirm(
+                                            "Have you completed this skill swap?"
+                                        );
+
+
+                                    if (!confirmed) {
+
+                                        return;
+
+                                    }
+
+
+
+                                    try {
+
+                                        await updateDoc(
+
+                                            doc(
+                                                db,
+                                                "swapRequests",
+                                                swapId
+                                            ),
+
+                                            {
+                                                status:
+                                                    "completed"
+                                            }
+
+                                        );
+
+
+
+                                        alert(
+                                            "Swap completed successfully! Please rate your partner."
+                                        );
+
+
+
+                                        // GO TO RATING PAGE
+
+                                        window.location.href =
+                                            "rate.html";
+
+
+                                    } catch (error) {
+
+                                        console.error(
+                                            "Complete swap error:",
+                                            error
+                                        );
+
+
+                                        alert(
+                                            "Could not complete the swap."
+                                        );
+
+                                    }
+
+                                }
+                            );
+
+                        }
+                    );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Load swaps error:",
+                    error
+                );
+
+
+                swapsContainer.innerHTML = `
+
+                    <div class="empty-state">
+
+                        <h3>
+                            Could not load active swaps
+                        </h3>
+
+                        <p>
+                            Please try again.
+                        </p>
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+
+
+        // =========================
+        // LOGOUT
+        // =========================
+
+        logoutBtn.addEventListener(
+            "click",
+            async () => {
+
+                await signOut(auth);
+
+                window.location.href =
+                    "login.html";
+
+            }
+        );
+
+
+
+        // =========================
+        // ESCAPE HTML
+        // =========================
+
+        function escapeHTML(value) {
+
+            return String(value)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+    </script>
+
+<script src="theme.js"></script>
+
+</body>
+
+</html>

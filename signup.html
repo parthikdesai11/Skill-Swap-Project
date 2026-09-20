@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sign Up - SkillSwap</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-page">
+
+    <div class="auth-container">
+
+        <!-- Left Side -->
+        <div class="auth-info">
+
+            <a href="index.html" class="auth-logo">
+                Skill<span>Swap</span>
+            </a>
+
+            <h1>
+                Start learning.<br>
+                Start sharing.
+            </h1>
+
+            <p>
+                Create your SkillSwap account and connect
+                with people who can teach you something new.
+            </p>
+
+            <div class="auth-points">
+
+                <div>
+                    <span>✓</span>
+                    Share the skills you know
+                </div>
+
+                <div>
+                    <span>✓</span>
+                    Discover skills you want to learn
+                </div>
+
+                <div>
+                    <span>✓</span>
+                    Connect with skill partners
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Signup Form -->
+        <div class="auth-form-container">
+
+            <div class="auth-form">
+
+                <h2>Create your account</h2>
+
+                <p class="form-subtitle">
+                    Join the SkillSwap community today.
+                </p>
+
+
+                <form id="signupForm">
+
+                    <div class="form-group">
+
+                        <label for="name">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="name"
+                            placeholder="Enter your full name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="you@example.com"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Create a password"
+                            minlength="6"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="confirmPassword">
+                            Confirm Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            placeholder="Confirm your password"
+                            minlength="6"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="auth-submit"
+                    >
+                        Create Account
+                    </button>
+
+                </form>
+
+
+                <p class="auth-switch">
+
+                    Already have an account?
+
+                    <a href="login.html">
+                        Login
+                    </a>
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script type="module" src="script.js"></script>
+    <script src="theme.js"></script>
+
+</body>
+
+</html>

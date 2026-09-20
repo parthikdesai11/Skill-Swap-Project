@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+
+>
+
+  <title>Admin Dashboard - SkillSwap</title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+
+  <nav class="dashboard-navbar">
+
+```
+<div class="dashboard-logo">
+  SkillSwap Admin
+</div>
+
+<div class="dashboard-nav-links">
+
+  <a href="dashboard.html">
+    Dashboard
+  </a>
+
+  <a href="profile.html">
+    Profile
+  </a>
+
+  <a href="requests.html">
+    Requests
+  </a>
+
+  <button
+    id="logoutBtn"
+    class="logout-btn"
+  >
+    Logout
+  </button>
+
+</div>
+```
+
+  </nav>
+
+  <!-- MAIN -->
+
+  <main class="dashboard-container">
+
+```
+<div class="page-header">
+
+  <h1>
+    Admin Dashboard
+  </h1>
+
+  <p>
+    Manage users and monitor the SkillSwap platform.
+  </p>
+
+</div>
+
+
+<!-- STATISTICS -->
+
+<section class="stats-grid">
+
+  <div class="stat-card">
+
+    <div class="stat-icon">
+      👥
+    </div>
+
+    <div>
+
+      <h3 id="totalUsers">
+        0
+      </h3>
+
+      <p>
+        Total Users
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <div class="stat-card">
+
+    <div class="stat-icon">
+      🔄
+    </div>
+
+    <div>
+
+      <h3 id="totalRequests">
+        0
+      </h3>
+
+      <p>
+        Swap Requests
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <div class="stat-card">
+
+    <div class="stat-icon">
+      ⭐
+    </div>
+
+    <div>
+
+      <h3 id="totalRatings">
+        0
+      </h3>
+
+      <p>
+        Ratings
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- USERS -->
+
+<section class="dashboard-card">
+
+  <div class="section-header">
+
+    <div>
+
+      <h2>
+        User Management
+      </h2>
+
+      <p>
+        View registered SkillSwap users.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <div id="usersContainer">
+
+    <div class="empty-state">
+
+      <h3>
+        Loading users...
+      </h3>
+
+    </div>
+
+  </div>
+
+</section>
+```
+
+  </main>
+
+  <!-- FIREBASE -->
+
+  <script type="module">
+
+    import {
+      auth,
+      db
+    } from "./firebase.js";
+
+
+    import {
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+
+    import {
+      collection,
+      getDocs,
+      doc,
+      deleteDoc
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+
+    const totalUsers =
+      document.getElementById("totalUsers");
+
+
+    const totalRequests =
+      document.getElementById("totalRequests");
+
+
+    const totalRatings =
+      document.getElementById("totalRatings");
+
+
+    const usersContainer =
+      document.getElementById("usersContainer");
+
+
+    const logoutBtn =
+      document.getElementById("logoutBtn");
+
+
+    let currentUser = null;
+
+
+    /* =========================================
+       AUTH CHECK
+    ========================================= */
+
+    onAuthStateChanged(
+      auth,
+      async (user) => {
+
+        if (!user) {
+
+          window.location.href =
+            "login.html";
+
+          return;
+
+        }
+
+
+        currentUser = user;
+
+
+        try {
+
+          await checkAdmin();
+
+          await loadAdminData();
+
+        } catch (error) {
+
+          console.error(error);
+
+          document.body.innerHTML = `
+
+            <div
+              style="
+                padding:40px;
+                text-align:center;
+                font-family:Arial;
+              "
+            >
+
+              <h1>
+                Access Denied
+              </h1>
+
+              <p>
+                You do not have administrator access.
+              </p>
+
+              <a href="dashboard.html">
+                Return to Dashboard
+              </a>
+
+            </div>
+
+          `;
+
+        }
+
+      }
+    );
+
+
+    /* =========================================
+       CHECK ADMIN
+    ========================================= */
+
+    async function checkAdmin() {
+
+      const userRef =
+        doc(
+          db,
+          "users",
+          currentUser.uid
+        );
+
+
+      const userSnapshot =
+        await getDocs(
+          collection(db, "users")
+        );
+
+
+      let currentUserData = null;
+
+
+      userSnapshot.forEach(
+        (userDoc) => {
+
+          if (
+            userDoc.id === currentUser.uid
+          ) {
+
+            currentUserData =
+              userDoc.data();
+
+          }
+
+        }
+      );
+
+
+      if (
+        !currentUserData ||
+        currentUserData.role !== "admin"
+      ) {
+
+        throw new Error(
+          "User is not an administrator."
+        );
+
+      }
+
+    }
+
+
+    /* =========================================
+       LOAD ADMIN DATA
+    ========================================= */
+
+    async function loadAdminData() {
+
+      await loadUsers();
+
+      await loadRequests();
+
+      await loadRatings();
+
+    }
+
+
+    /* =========================================
+       LOAD USERS
+    ========================================= */
+
+    async function loadUsers() {
+
+      const snapshot =
+        await getDocs(
+          collection(db, "users")
+        );
+
+
+      totalUsers.textContent =
+        snapshot.size;
+
+
+      if (snapshot.empty) {
+
+        usersContainer.innerHTML = `
+
+          <div class="empty-state">
+
+            <h3>
+              No users found
+            </h3>
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      let html = `
+
+        <div class="admin-users-list">
+
+      `;
+
+
+      snapshot.forEach(
+        (userDoc) => {
+
+          const user =
+            userDoc.data();
+
+
+          const name =
+            user.name ||
+            "Unnamed User";
+
+
+          const email =
+            user.email ||
+            "No email";
+
+
+          const role =
+            user.role ||
+            "user";
+
+
+          const publicStatus =
+            user.isPublic === true
+              ? "Public"
+              : "Private";
+
+
+          html += `
+
+            <div class="admin-user-card">
+
+              <div class="admin-user-info">
+
+                <div class="admin-user-avatar">
+
+                  ${escapeHTML(
+                    name.charAt(0).toUpperCase()
+                  )}
+
+                </div>
+
+
+                <div>
+
+                  <h3>
+                    ${escapeHTML(name)}
+                  </h3>
+
+                  <p>
+                    ${escapeHTML(email)}
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div class="admin-user-details">
+
+                <span>
+                  Role: ${escapeHTML(role)}
+                </span>
+
+                <span>
+                  Profile: ${publicStatus}
+                </span>
+
+              </div>
+
+
+              ${
+                userDoc.id !== currentUser.uid
+                  ? `
+                    <button
+                      class="delete-user-btn"
+                      data-user-id="${userDoc.id}"
+                      data-user-name="${escapeHTML(name)}"
+                    >
+                      Delete User
+                    </button>
+                  `
+                  : `
+                    <span class="admin-badge">
+                      You
+                    </span>
+                  `
+              }
+
+            </div>
+
+          `;
+
+        }
+      );
+
+
+      html += `
+        </div>
+      `;
+
+
+      usersContainer.innerHTML =
+        html;
+
+
+      addDeleteListeners();
+
+    }
+
+
+    /* =========================================
+       LOAD REQUESTS COUNT
+    ========================================= */
+
+    async function loadRequests() {
+
+      const snapshot =
+        await getDocs(
+          collection(db, "swapRequests")
+        );
+
+
+      totalRequests.textContent =
+        snapshot.size;
+
+    }
+
+
+    /* =========================================
+       LOAD RATINGS COUNT
+    ========================================= */
+
+    async function loadRatings() {
+
+      const snapshot =
+        await getDocs(
+          collection(db, "ratings")
+        );
+
+
+      totalRatings.textContent =
+        snapshot.size;
+
+    }
+
+
+    /* =========================================
+       DELETE USER
+    ========================================= */
+
+    function addDeleteListeners() {
+
+      document
+        .querySelectorAll(".delete-user-btn")
+        .forEach(
+          (button) => {
+
+            button.addEventListener(
+              "click",
+              async () => {
+
+                const userId =
+                  button.dataset.userId;
+
+
+                const userName =
+                  button.dataset.userName;
+
+
+                const confirmed =
+                  confirm(
+                    `Are you sure you want to delete ${userName}'s profile?`
+                  );
+
+
+                if (!confirmed) {
+
+                  return;
+
+                }
+
+
+                try {
+
+                  await deleteDoc(
+                    doc(
+                      db,
+                      "users",
+                      userId
+                    )
+                  );
+
+
+                  alert(
+                    "User profile deleted successfully."
+                  );
+
+
+                  await loadUsers();
+
+
+                } catch (error) {
+
+                  console.error(
+                    "Delete user error:",
+                    error
+                  );
+
+
+                  alert(
+                    "Could not delete the user."
+                  );
+
+                }
+
+              }
+            );
+
+          }
+        );
+
+    }
+
+
+    /* =========================================
+       ESCAPE HTML
+    ========================================= */
+
+    function escapeHTML(value) {
+
+      return String(value)
+
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+
+        .replace(
+          /</g,
+          "&lt;"
+        )
+
+        .replace(
+          />/g,
+          "&gt;"
+        )
+
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+
+    /* =========================================
+       LOGOUT
+    ========================================= */
+
+    logoutBtn.addEventListener(
+      "click",
+      async () => {
+
+        await signOut(auth);
+
+        window.location.href =
+          "login.html";
+
+      }
+    );
+
+  </script>
+
+<script src="theme.js"></script>
+
+</body>
+
+</html>
